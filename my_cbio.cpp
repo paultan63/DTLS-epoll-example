@@ -136,7 +136,7 @@ int BIO_s_custom_read(BIO *b, char *data, int dlen)
 
         if (cdp->m_iPeekMode == 0){
             dp->pop_front();
-            delete(bp);
+            free(bp);
         }
     }
 

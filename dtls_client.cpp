@@ -41,8 +41,9 @@ void readline_handler(char *line)
 {
     if (line)
     {
-        if (connected)
+        if (connected){
             SSL_write(ssl, line, strlen(line));
+        }
         else
             fputs("NOT connected\n", stderr);
 
@@ -234,7 +235,7 @@ int main(int argc, char **argv)
         }
     }
 
-    delete packet;
+    free(packet);
 
     SSL_free(ssl);
     SSL_CTX_free(ctx);

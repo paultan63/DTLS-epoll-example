@@ -61,13 +61,23 @@ struct UdpConnectInfo{
 };
 
 unsigned char cookie_secret[COOKIE_SECRET_LENGTH];
+int listen_fd;
 SSL_CTX *ctx;
 ConnectMap stConnMap;
+UdpConnectInfo* pstListenConnInfo = NULL;
 
 char cookie_str[] = "BISCUIT!";
 
 UdpConnectInfo* new_udpconnect_info();
 
+
+void signal_handler(int sig)
+{
+    if (sig==SIGINT)
+        fprintf(stderr, "signal SIGINT\n");
+    else
+        fprintf(stderr, "get signal[%d]\n", sig);
+}
 
 int init_cookie_secret()
 {
@@ -339,7 +349,6 @@ UdpConnectInfo* new_udpconnect_info()
 }
 
 
-
 void check_idle_socket(time_t time_now)
 {
 	for(ConnectMapIterator it=stConnMap.begin(); it != stConnMap.end(); ){
@@ -357,6 +366,7 @@ void check_idle_socket(time_t time_now)
 
 	return;
 }
+
 
 void show_usage(const char* name)
 {
@@ -455,12 +465,12 @@ int main(int argc, char* argv[])
     	printf("listen fd:%d\n", listen_fd);
     }
     
-    UdpConnectInfo* pstInfo = new_udpconnect_info();
-    if(pstInfo == NULL){
+    UdpConnectInfo* pstListenConnInfo = new_udpconnect_info();
+    if(pstListenConnInfo == NULL){
     	printf("new udpconnect info error:%m\n");
     	exit(4);
     }
-    pstInfo->m_fEvHandle = on_connect;
+    pstListenConnInfo->m_fEvHandle = on_connect;
     
 
 	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (const void*) &on, (socklen_t) sizeof(on));
@@ -479,6 +489,8 @@ int main(int argc, char* argv[])
     epe.data.fd = listen_fd;
 	epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &epe);
 
+
+	signal(SIGINT, signal_handler);
 
 	int ev_num;
 	struct epoll_event evs[10];
@@ -500,12 +512,12 @@ int main(int argc, char* argv[])
 				continue;
 			}
 
-			while((pstPkg->m_iLen = recvfrom(evs[i].data.fd, pstPkg->m_auchBuf, pstPkg->m_iCap, 0, (struct sockaddr *)&pstInfo->m_stBioData.m_stClientAddr, (socklen_t*)&pstInfo->m_stBioData.m_stAddrBuf.m_iLen)) > 0){
-				dump_addr((struct sockaddr *)&pstInfo->m_stBioData.m_stClientAddr, "<< ");
+			while((pstPkg->m_iLen = recvfrom(evs[i].data.fd, pstPkg->m_auchBuf, pstPkg->m_iCap, 0, (struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, (socklen_t*)&pstListenConnInfo->m_stBioData.m_stAddrBuf.m_iLen)) > 0){
+				dump_addr((struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, "<< ");
 
-				ConnectMapIterator it = stConnMap.find(&(pstInfo->m_stBioData.m_stAddrBuf));
+				ConnectMapIterator it = stConnMap.find(&(pstListenConnInfo->m_stBioData.m_stAddrBuf));
 				if(it != stConnMap.end()){
-					dump_addr((struct sockaddr *)&pstInfo->m_stBioData.m_stClientAddr, "recv data from client: ");
+					dump_addr((struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, "recv data from client: ");
 
 					UdpConnectInfo* pstConn = it->second;
 
@@ -523,12 +535,12 @@ int main(int argc, char* argv[])
 					}
 				}
 				else{
-					dump_addr((struct sockaddr *)&pstInfo->m_stBioData.m_stClientAddr, "new connection: ");
+					dump_addr((struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, "new connection: ");
 
-					pstInfo->m_stBioData.m_iFd = evs[i].data.fd;
-					pstInfo->m_stBioData.m_stQueue.push_back((void*)pstPkg);
+					pstListenConnInfo->m_stBioData.m_iFd = evs[i].data.fd;
+					pstListenConnInfo->m_stBioData.m_stQueue.push_back((void*)pstPkg);
 
-					ret = do_new_connection(pstInfo);
+					ret = do_new_connection(pstListenConnInfo);
 				}
 
 				pstPkg = CustomBuffer::NewBuf(2000);
@@ -550,10 +562,16 @@ int main(int argc, char* argv[])
 		delete pstConn;
 	}
 
-	delete pstInfo;
+	free(pstPkg);
+	pstPkg = NULL;
+
+	delete pstListenConnInfo;
+	pstListenConnInfo = NULL;
 
 	close(listen_fd);
 	SSL_CTX_free(ctx);
+
+	BIO_s_custom_meth_free();
 
 	return(0);
 }
