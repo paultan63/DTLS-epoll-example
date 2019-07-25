@@ -3,7 +3,7 @@
 * A DTLS server/client example with openssl-1.1.0 or above
 * Server support multi-client
 * A custom BIO with STL hash_map and deque
-* Test under CentOS 7.6
+* Tested on CentOS 7.6
 
 # Install
 * Modify Makefile if needed
