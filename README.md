@@ -6,6 +6,7 @@
 * Tested on CentOS 7.6
 
 # Install
+* yum install -y readline-devel
 * Modify Makefile if needed
 * make all
 
