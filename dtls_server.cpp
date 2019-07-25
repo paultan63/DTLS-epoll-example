@@ -66,7 +66,6 @@ SSL_CTX *ctx;
 ConnectMap stConnMap;
 UdpConnectInfo* pstListenConnInfo = NULL;
 
-char cookie_str[] = "BISCUIT!";
 
 UdpConnectInfo* new_udpconnect_info();
 
