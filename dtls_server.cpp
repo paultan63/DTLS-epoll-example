@@ -9,7 +9,6 @@
 #include <sys/epoll.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <hash_map>
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
@@ -28,8 +27,20 @@
 
 struct UdpConnectInfo;
 typedef int (*EventHandler)(UdpConnectInfo* pstConnInfo);
-typedef __gnu_cxx::hash_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer> ConnectMap;
-typedef __gnu_cxx::hash_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer>::iterator ConnectMapIterator;
+
+
+#if (__cplusplus >= 201103L)  // c++11
+#include <unordered_map>
+typedef std::unordered_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer> ConnectMap; 
+typedef std::unordered_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer>::iterator ConnectMapIterator;
+
+#else // c++98
+
+#include <tr1/unordered_map>
+typedef std::tr1::unordered_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer> ConnectMap;
+typedef std::tr1::unordered_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer, CompareCustomBuffer>::iterator ConnectMapIterator;
+
+#endif
 
 struct UdpConnectInfo{
 	CustomBioData	m_stBioData;

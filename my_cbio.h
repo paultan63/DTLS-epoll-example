@@ -6,9 +6,9 @@
 #include <sys/types.h>
 #include <deque>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/bio.h>
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+#include "openssl/bio.h"
 
 struct CustomBuffer{
 	int	m_iCap;
