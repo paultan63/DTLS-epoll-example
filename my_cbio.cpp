@@ -173,8 +173,8 @@ long BIO_s_custom_ctrl(BIO *b, int cmd, long num, void *ptr)
 {
     long ret = 0;
 
-    fprintf(stderr, "%s: BIO[0x%016lX], cmd[%d], num[%ld], ptr[0x%016lX]\n", __FUNCTION__, b, cmd, num, ptr);
-    fflush(stderr);
+//    fprintf(stderr, "%s: BIO[0x%016lX], cmd[%d], num[%ld], ptr[0x%016lX]\n", __FUNCTION__, b, cmd, num, ptr);
+//    fflush(stderr);
 
     CustomBioData* pstData = (CustomBioData *)BIO_get_data(b);
 
