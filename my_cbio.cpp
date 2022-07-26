@@ -130,7 +130,7 @@ int BIO_s_custom_read(BIO *b, char *data, int dlen)
         bp = (CustomBuffer*)dp->front();
 
         ret = (bp->m_iLen <= dlen) ? bp->m_iLen : dlen;
-        memmove(data, bp->m_auchBuf, ret);
+        memmove(data, bp->BufBegin(), ret);
 
         fprintf(stderr, "  buf[0x%016lX] read len:%d\n", bp, ret);
 

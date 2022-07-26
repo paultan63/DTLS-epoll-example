@@ -13,7 +13,7 @@
 struct CustomBuffer{
 	int	m_iCap;
 	int	m_iLen;
-	unsigned char m_auchBuf[];
+//	unsigned char m_auchBuf[];
 
 	CustomBuffer()
 	{
@@ -25,6 +25,11 @@ struct CustomBuffer{
 	{
 		m_iCap = 0;
 		m_iLen = 0;
+	}
+
+	unsigned char* BufBegin() const
+	{
+		return (unsigned char*)&m_iLen + sizeof(int);
 	}
 
 	static CustomBuffer* NewBuf(unsigned int uiBufSize)
@@ -94,7 +99,7 @@ struct HashCustomBuffer
 	size_t operator()(const CustomBuffer* o) const
 	{ 
 		
-		return hash_unsigned_string((const char*)o->m_auchBuf, (unsigned int)o->m_iLen);
+		return hash_unsigned_string((const char*)o->BufBegin(), (unsigned int)o->m_iLen);
 	}
 };
 
@@ -106,7 +111,7 @@ struct CompareCustomBuffer{
 
 		const int len = a->m_iLen;
 		for(int i=0; i < len; i++){
-			if(a->m_auchBuf[i] != b->m_auchBuf[i])
+			if(a->BufBegin()[i] != b->BufBegin()[i])
 				return(0);
         }
 

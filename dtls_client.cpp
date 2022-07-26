@@ -188,7 +188,7 @@ int main(int argc, char **argv)
             rl_callback_read_char();
         if (epe.data.fd==sockfd)
         {
-            while ((packet->m_iLen=recv(sockfd, packet->m_auchBuf, packet->m_iCap, 0))>=0)
+            while ((packet->m_iLen=recv(sockfd, packet->BufBegin(), packet->m_iCap, 0))>=0)
             {
                 fprintf(stderr, "\033[2K\r<< %d bytes\n", packet->m_iLen);
 
@@ -199,12 +199,12 @@ int main(int argc, char **argv)
 
                 if (connected)
                 {
-                    packet->m_iLen = SSL_read(ssl, packet->m_auchBuf, packet->m_iCap);
+                    packet->m_iLen = SSL_read(ssl, packet->BufBegin(), packet->m_iCap);
 
                     if (packet->m_iLen>0)
                     {
-                    packet->m_auchBuf[packet->m_iLen] = 0;
-                    printf("recv: %s\n", (const char*)packet->m_auchBuf);
+                    packet->BufBegin()[packet->m_iLen] = 0;
+                    printf("recv: %s\n", (const char*)packet->BufBegin());
                     }
                     else if (packet->m_iLen==0)
                     {

@@ -20,6 +20,7 @@
 #define COOKIE_SECRET_LENGTH 16
 #define EPOLL_TIMEOUT 1000 // miliseconds
 #define SOCKET_IDLE_TIMEOUT 600 // seconds
+#define SHUTDOWN_TIMEOUT 5 // seconds
 
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 #define MIN(x, y) ((x) <= (y) ? (x) : (y))
@@ -42,9 +43,16 @@ typedef std::tr1::unordered_map<CustomBuffer*, UdpConnectInfo*, HashCustomBuffer
 
 #endif
 
+typedef enum{
+	DTLS_STATUS_INIT=0, // wait connect
+	DTLS_STATUS_CONNECTED=1, // connected
+	DTLS_STATUS_SHUTDOWN=2, // shutdown & wait close
+}ConnStatusType;
+
 struct UdpConnectInfo{
 	CustomBioData	m_stBioData;
 	SSL*			m_pstSSL;
+	int 			m_iStatus;
 	time_t			m_tLastAccess;
 	ConnectMap*		m_pstConnMap;
 	EventHandler	m_fEvHandle;
@@ -52,6 +60,7 @@ struct UdpConnectInfo{
 	UdpConnectInfo()
 	{
 		m_pstSSL = NULL;
+		m_iStatus = DTLS_STATUS_INIT;
 		m_tLastAccess = 0;
 		m_pstConnMap = NULL;
 		m_fEvHandle = NULL;
@@ -65,6 +74,7 @@ struct UdpConnectInfo{
 		if(m_pstSSL != NULL)
 			SSL_free(m_pstSSL);
 		m_pstSSL = NULL;
+		m_iStatus = DTLS_STATUS_INIT;
 		m_tLastAccess = 0;
 		m_pstConnMap = NULL;
 		m_fEvHandle = NULL;
@@ -277,6 +287,7 @@ int on_connect(UdpConnectInfo* pstInfo)
 		dump_addr((struct sockaddr *)&pstInfo->m_stBioData.m_stClientAddr, "new connection: ");
 
 		pstInfo->m_fEvHandle = on_message;
+		pstInfo->m_iStatus = DTLS_STATUS_CONNECTED;
 	}
 	
 	else{
@@ -368,10 +379,25 @@ void check_idle_socket(time_t time_now)
 			continue;
 		}
 
-		printf("client socket[%d] timeout, close it now\n", pstInfo->m_stBioData.m_iFd);
-		stConnMap.erase(it++);
+		if(pstInfo->m_iStatus == DTLS_STATUS_SHUTDOWN){
+			if(time_now - pstInfo->m_tLastAccess < SOCKET_IDLE_TIMEOUT + SHUTDOWN_TIMEOUT){
+				++it;
+				continue;
+			}
 
-		delete pstInfo;
+			printf("client socket[%d] shutdown timeout, release it now\n", pstInfo->m_stBioData.m_iFd);
+		
+			stConnMap.erase(it++);
+
+			delete pstInfo;
+		}
+		else{
+			printf("client socket[%d] idle timeout, shutdown it now\n", pstInfo->m_stBioData.m_iFd);
+		
+			SSL_shutdown(pstInfo->m_pstSSL);
+			++it;
+		}
+
 	}
 
 	return;
@@ -522,7 +548,7 @@ int main(int argc, char* argv[])
 				continue;
 			}
 
-			while((pstPkg->m_iLen = recvfrom(evs[i].data.fd, pstPkg->m_auchBuf, pstPkg->m_iCap, 0, (struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, (socklen_t*)&pstListenConnInfo->m_stBioData.m_stAddrBuf.m_iLen)) > 0){
+			while((pstPkg->m_iLen = recvfrom(evs[i].data.fd, pstPkg->BufBegin(), pstPkg->m_iCap, 0, (struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, (socklen_t*)&pstListenConnInfo->m_stBioData.m_stAddrBuf.m_iLen)) > 0){
 				dump_addr((struct sockaddr *)&pstListenConnInfo->m_stBioData.m_stClientAddr, "<< ");
 
 				ConnectMapIterator it = stConnMap.find(&(pstListenConnInfo->m_stBioData.m_stAddrBuf));
