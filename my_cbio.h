@@ -84,7 +84,7 @@ struct HashCustomBuffer
 	    unsigned int h = 0, g = 0;
 	    const char *pchEnd = pchKey + uiKeySize;
 
-	    //变长key hash算法。
+	    //key hash
 	    while (pchKey < pchEnd){
 				h = (h << 4) + *pchKey++;
 				if ((g = (h & 0xF0000000))){
